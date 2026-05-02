@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"path/filepath"
+	"time"
 
 	"github.com/YogeshUpdhyay/ypoker/internal/constants"
 	"github.com/YogeshUpdhyay/ypoker/internal/db"
@@ -27,6 +28,7 @@ type Server struct {
 
 type ServerConfig struct {
 	ListenAddr       string
+	RelayAddr        string
 	Version          string
 	ServerName       string
 	IdentityFilePath string
@@ -47,6 +49,10 @@ func (cfg *ServerConfig) ApplyDefaults() {
 
 	if cfg.ListenAddr == "" {
 		cfg.ListenAddr = ":3000"
+	}
+
+	if cfg.RelayAddr == constants.Empty {
+		cfg.RelayAddr = constants.DefaultRelayAddr
 	}
 }
 
@@ -71,6 +77,7 @@ func NewServer(cfg ServerConfig) *Server {
 
 	server.transport = &P2PTransport{
 		ListenAddr: server.ListenAddr,
+		RelayAddr:  server.RelayAddr,
 		addPeer:    server.addPeer,
 
 		// internals
@@ -83,7 +90,7 @@ func NewServer(cfg ServerConfig) *Server {
 func (s *Server) Start(ctx context.Context, password string) {
 	log.Info("starting server")
 	go s.loop(ctx)
-	if err := s.transport.ListenAndAccept(s.ServerName, password); err != nil {
+	if err := s.transport.ListenAndAccept(ctx, s.ServerName, password); err != nil {
 		log.Fatal("error starting the server")
 	}
 }
@@ -126,11 +133,21 @@ func (s *Server) Connect(ctx context.Context, remoteAddr string) (*Peer, error) 
 		return nil, err
 	}
 
+	// ✅ Wait for identify to finish
+	for i := 0; i < 10; i++ {
+		if protocols, _ := s.transport.host.Peerstore().GetProtocols(peerInfo.ID); len(protocols) > 0 {
+			log.WithContext(ctx).Infof("protocols %v", protocols)
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+
 	// open a stream to the peer using your protocol
 	appConfig := utils.GetAppConfig()
+	log.WithContext(ctx).Infof("starting new stream  for %s and %s", peerInfo.ID.String(), appConfig.StreamProtocol)
 	stream, err := s.transport.host.NewStream(ctx, peerInfo.ID, protocol.ID(appConfig.StreamProtocol))
 	if err != nil {
-		log.Errorf("error opening stream: %s", err)
+		log.Errorf("error opening stream to %s: %s", peerInfo.ID, err)
 		return nil, err
 	}
 

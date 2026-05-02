@@ -1,0 +1,31 @@
+# Step 1: Build stage
+FROM golang:1.23 AS builder
+
+WORKDIR /app
+
+# Cache go modules
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY cmd/relay/main.go .
+
+# Build the relay binary statically
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o relay-server main.go
+
+# Step 2: Minimal runtime image
+FROM alpine:latest
+
+# Add CA certificates (needed if your relay logs to HTTPS or external systems)
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/relay-server .
+
+# Expose relay port (adjust if your code uses another)
+EXPOSE 4001/tcp
+
+# Run the relay
+ENTRYPOINT ["./relay-server"]

@@ -8,6 +8,7 @@ const (
 	ApplicationConfigFileName   = "config.yml"
 	ApplicationDBFilleName      = "yoker.db"
 	DatabasePathDefault         = ApplicationDataDir + "/" + ApplicationDBFilleName
+	DefaultRelayAddr            = "/dns4/0.tcp.in.ngrok.io/tcp/19307/p2p/12D3KooWHNfGzXZ9cUbJ2pAP7nkFEPzWgNWj91LfU2NMNasbZPRf"
 
 	Ping = "PING"
 	Pong = "PONG"

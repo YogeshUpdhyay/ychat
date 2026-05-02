@@ -14,6 +14,7 @@ type AppConfig struct {
 	Version        string `yaml:"version"`
 	StreamProtocol string `yaml:"stream_protocol"`
 	DatabasePath   string `yaml:"database_path"`
+	RelayAddr      string `yaml:"relay_addr"`
 }
 
 func DefaultAppConfig() AppConfig {
@@ -23,6 +24,7 @@ func DefaultAppConfig() AppConfig {
 		Version:        constants.ServerVersionDefault,
 		StreamProtocol: constants.StreamProtocolDefault,
 		DatabasePath:   constants.DatabasePathDefault,
+		RelayAddr:      constants.DefaultRelayAddr,
 	}
 }
 
