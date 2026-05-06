@@ -46,6 +46,7 @@ func (t *P2PTransport) ListenAndAccept(ctx context.Context, serverName string, p
 	if err != nil {
 		return err
 	}
+	t.host = h
 
 	appConfig := utils.GetAppConfig()
 	log.WithContext(ctx).Infof("adding handler for %s", appConfig.StreamProtocol)
@@ -62,8 +63,6 @@ func (t *P2PTransport) ListenAndAccept(ctx context.Context, serverName string, p
 	log.WithContext(ctx).Infof("✅ Connected to relay: %s", relayInfo.ID)
 
 	connectToRelay(ctx, h, relayInfo)
-
-	t.host = h
 
 	log.WithField(constants.ServerName, fmt.Sprintf("%s@%s", serverName, h.ID().String())).Infof("server listening at %v", t.GetMyFullAddr())
 
@@ -106,7 +105,7 @@ func getRelayInfo(ctx context.Context, relayAddr string) (*peerStore.AddrInfo, e
 		return nil, err
 	}
 
-	log.WithContext(ctx).Info("using relay info %v", relayInfo)
+	log.WithContext(ctx).Infof("using relay info %v", relayInfo)
 	return relayInfo, err
 }
 

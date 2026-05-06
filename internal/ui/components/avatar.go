@@ -1,6 +1,8 @@
 package components
 
 import (
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/theme"
@@ -20,11 +22,19 @@ func NewAvatar(url string) *Avatar {
 }
 
 func (a *Avatar) CreateRenderer() fyne.WidgetRenderer {
+	if a.URL == "" || strings.Contains(a.URL, "avatar.iran.liara.run") {
+		return newAvatarRenderer(theme.AccountIcon())
+	}
+
 	imageResource, err := fyne.LoadResourceFromURLString(a.URL)
 	if err != nil {
 		log.Infof("error loading resource %s", err.Error())
-		imageResource = theme.FyneLogo()
+		imageResource = theme.AccountIcon()
 	}
+	return newAvatarRenderer(imageResource)
+}
+
+func newAvatarRenderer(imageResource fyne.Resource) fyne.WidgetRenderer {
 	image := canvas.NewImageFromResource(imageResource)
 	image.SetMinSize(fyne.NewSize(50, 50))
 	image.FillMode = canvas.ImageFillContain

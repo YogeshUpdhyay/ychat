@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/YogeshUpdhyay/ypoker/internal/constants"
 	"github.com/YogeshUpdhyay/ypoker/internal/db"
@@ -11,6 +12,7 @@ import (
 	p2pModels "github.com/YogeshUpdhyay/ypoker/internal/p2p/models"
 	"github.com/YogeshUpdhyay/ypoker/internal/utils"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type Handler interface {
@@ -83,7 +85,7 @@ func handleHandshakeAck(ctx context.Context, peerID string, hsAck p2pModels.Hand
 	// check if peer is in the db
 	peerInfo := db.PeerInfo{PeerID: peerID}
 	tx := db.Get().First(&peerInfo)
-	if tx.Error != nil {
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		log.WithContext(ctx).Infof("error getting peer info %s", tx.Error.Error())
 		return
 	}
@@ -156,7 +158,7 @@ func handleHandshake(ctx context.Context, peerID string, hs p2pModels.HandShake)
 	// check if peer is in the db
 	peerInfo := db.PeerInfo{PeerID: peerID}
 	tx := db.Get().First(&peerInfo)
-	if tx.Error != nil {
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		log.WithContext(ctx).Infof("error getting peer info %s", tx.Error.Error())
 		return
 	}

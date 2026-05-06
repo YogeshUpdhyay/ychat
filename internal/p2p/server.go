@@ -91,7 +91,7 @@ func (s *Server) Start(ctx context.Context, password string) {
 	log.Info("starting server")
 	go s.loop(ctx)
 	if err := s.transport.ListenAndAccept(ctx, s.ServerName, password); err != nil {
-		log.Fatal("error starting the server")
+		log.WithError(err).Fatal("error starting the server")
 	}
 }
 
@@ -132,6 +132,9 @@ func (s *Server) Connect(ctx context.Context, remoteAddr string) (*Peer, error) 
 		log.Errorf("error connecting to peer: %s", err)
 		return nil, err
 	}
+	for _, conn := range s.transport.host.Network().ConnsToPeer(peerInfo.ID) {
+		log.WithContext(ctx).Infof("connected to peer %s using %s", peerInfo.ID, conn.RemoteMultiaddr())
+	}
 
 	// ✅ Wait for identify to finish
 	for i := 0; i < 10; i++ {
@@ -145,7 +148,10 @@ func (s *Server) Connect(ctx context.Context, remoteAddr string) (*Peer, error) 
 	// open a stream to the peer using your protocol
 	appConfig := utils.GetAppConfig()
 	log.WithContext(ctx).Infof("starting new stream  for %s and %s", peerInfo.ID.String(), appConfig.StreamProtocol)
-	stream, err := s.transport.host.NewStream(ctx, peerInfo.ID, protocol.ID(appConfig.StreamProtocol))
+	streamCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	streamCtx = libp2pnetwork.WithAllowLimitedConn(streamCtx, "open application stream over relay")
+	stream, err := s.transport.host.NewStream(streamCtx, peerInfo.ID, protocol.ID(appConfig.StreamProtocol))
 	if err != nil {
 		log.Errorf("error opening stream to %s: %s", peerInfo.ID, err)
 		return nil, err

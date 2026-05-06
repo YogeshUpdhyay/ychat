@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"time"
 
 	libp2p "github.com/libp2p/go-libp2p"
 	libp2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
@@ -55,7 +57,14 @@ func generateAndWriteIDKey(ctx context.Context, filePath string) (libp2pcrypto.P
 	}
 
 	encoded := base64.StdEncoding.EncodeToString(privBytes)
-	os.WriteFile(filePath, []byte(encoded), 0600)
+	if err := os.MkdirAll(filepath.Dir(filePath), 0700); err != nil {
+		log.WithContext(ctx).Infof("error creating id key dir %s", err.Error())
+		return nil, err
+	}
+	if err := os.WriteFile(filePath, []byte(encoded), 0600); err != nil {
+		log.WithContext(ctx).Infof("error writing id key %s", err.Error())
+		return nil, err
+	}
 
 	return priv, nil
 }
@@ -82,11 +91,18 @@ func main() {
 		panic(err)
 	}
 
+	relayOpts := []relay.Option{
+		relay.WithLimit(&relay.RelayLimit{
+			Duration: time.Hour,
+			Data:     1 << 25, // 32 MiB per direction.
+		}),
+	}
+
 	// relay host
 	relayHost, err := libp2p.New(
 		libp2p.Identity(key),
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/4001"),
-		libp2p.EnableRelayService(),
+		libp2p.EnableRelayService(relayOpts...),
 	)
 	if err != nil {
 		log.Fatalf("failed to create host: %v", err)
@@ -103,7 +119,7 @@ func main() {
 
 	log.Infof("Relay Node started with PeerID: %s", relayHost.ID())
 
-	_, err = relay.New(relayHost)
+	_, err = relay.New(relayHost, relayOpts...)
 	if err != nil {
 		log.Fatalf("failed to enable relay service: %v", err)
 	}

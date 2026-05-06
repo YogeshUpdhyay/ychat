@@ -45,6 +45,6 @@ const (
 	EventNewMessage           = "new_message"
 
 	// dummy
-	DummyAvatarUrl    = "https://avatar.iran.liara.run/username?username=dummy&bold=false&length=1"
-	AvatarUrlTemplate = "https://avatar.iran.liara.run/username?username=%s&bold=true&length=1"
+	DummyAvatarUrl    = "https://api.dicebear.com/9.x/initials/png?seed=dummy"
+	AvatarUrlTemplate = "https://api.dicebear.com/9.x/initials/png?seed=%s"
 )
