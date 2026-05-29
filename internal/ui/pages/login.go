@@ -76,6 +76,7 @@ func (l *Login) Content(ctx context.Context) fyne.CanvasObject {
 			ListenAddr: appConfig.Port,
 			Version:    appConfig.Version,
 			ServerName: appConfig.Name,
+			RelayAddr:  appConfig.RelayAddr,
 		}
 		server := p2p.NewServer(serverConfig)
 		go server.Start(ctx, password)

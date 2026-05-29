@@ -2,6 +2,7 @@ package components
 
 import (
 	"context"
+	"fmt"
 	"image/color"
 	"strings"
 
@@ -146,7 +147,39 @@ func handleIncomingRequest(ctx context.Context, peerID, decision string, pending
 	log.WithContext(ctx).Infof("handling incoming request from peer %s with decision %s", peerID, decision)
 
 	appConfig := utils.GetAppConfig()
-	peer := p2p.GetServer().GetPeerFromPeerID(ctx, peerID)
+	server := p2p.GetServer()
+	if server == nil {
+		log.WithContext(ctx).Error("server not initialized")
+		return
+	}
+
+	dbConnReq := db.ConnectionRequests{}
+	tx := db.Get().
+		Where(&db.ConnectionRequests{
+			PeerID: peerID,
+			Status: constants.RequestStatusAwaitingDecision,
+		}).
+		First(&dbConnReq)
+	if tx.Error != nil {
+		log.WithContext(ctx).WithError(tx.Error).Errorf("error fetching connection request from peer %s", peerID)
+		return
+	}
+
+	peer := server.GetPeerFromPeerID(ctx, peerID)
+	if peer == nil && dbConnReq.Address != constants.Empty {
+		log.WithContext(ctx).Infof("peer %s is not connected, reconnecting using %s", peerID, dbConnReq.Address)
+		var err error
+		peer, err = server.Connect(ctx, fmt.Sprintf("%s/p2p/%s", dbConnReq.Address, dbConnReq.PeerID))
+		if err != nil {
+			log.WithContext(ctx).WithError(err).Errorf("error reconnecting to peer %s", peerID)
+			return
+		}
+	}
+	if peer == nil {
+		log.WithContext(ctx).Errorf("peer %s is not connected and no address is available", peerID)
+		return
+	}
+
 	envelope := &p2pModels.Envelope{
 		Type: p2pModels.MsgTypeHandshakeReject,
 	}
@@ -176,18 +209,6 @@ func handleIncomingRequest(ctx context.Context, peerID, decision string, pending
 		return
 	}
 	log.WithContext(ctx).Info("handshake decision sent to peer")
-
-	dbConnReq := db.ConnectionRequests{}
-	tx := db.Get().
-		Where(&db.ConnectionRequests{
-			PeerID: peerID,
-			Status: constants.RequestStatusAwaitingDecision,
-		}).
-		First(&dbConnReq)
-	if tx.Error != nil {
-		log.WithContext(ctx).WithError(tx.Error).Errorf("error fetching connection request from peer %s", peerID)
-		return
-	}
 
 	dbConnReq.Status = decision
 	tx = db.Get().Save(&dbConnReq)

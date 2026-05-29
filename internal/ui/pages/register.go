@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"image/color"
+	"net/url"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -69,7 +70,12 @@ func (l *Register) Content(ctx context.Context) fyne.CanvasObject {
 
 		// starting the server
 		appConfig := utils.GetAppConfig()
-		serverConfig := p2p.ServerConfig{ListenAddr: appConfig.Port, Version: appConfig.Version, ServerName: appConfig.Name}
+		serverConfig := p2p.ServerConfig{
+			ListenAddr: appConfig.Port,
+			Version:    appConfig.Version,
+			ServerName: appConfig.Name,
+			RelayAddr:  appConfig.RelayAddr,
+		}
 		server := p2p.NewServer(serverConfig)
 		server.InitializeIdentityFlow(ctx, password)
 		go server.Start(ctx, password)
@@ -88,7 +94,7 @@ func (l *Register) Content(ctx context.Context) fyne.CanvasObject {
 
 		// update usermetadata
 		userMetadata.Username = username
-		userMetadata.AvatarUrl = fmt.Sprintf(constants.AvatarUrlTemplate, username)
+		userMetadata.AvatarUrl = fmt.Sprintf(constants.AvatarUrlTemplate, url.QueryEscape(username))
 		userMetadata.LastLoginTs = time.Now()
 		userMetadata.CreateTs = time.Now()
 		userMetadata.PeerID = server.GetNodeID(ctx)
